@@ -58,9 +58,3 @@ rand = "0.8.5"
 quickcheck = "1.0.3"
 rand_distr = "0.4.3"
 libc = "0.2.147"
-
-[[test]]
-name = "test_crash_recovery"
-path = "tests/test_crash_recovery.rs"
-harness = false
-

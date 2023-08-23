@@ -72,9 +72,7 @@ impl Config {
         (zstd_compression_level, i32, "The zstd compression level to use when writing data to disk. Defaults to 3.")
     );
 
-    pub fn open<const LEAF_FANOUT: usize>(
-        &self,
-    ) -> io::Result<Db<LEAF_FANOUT>> {
+    pub fn open<const LEAF_FANOUT: usize>(&self) -> io::Result<Db<LEAF_FANOUT>> {
         if LEAF_FANOUT < 3 {
             return Err(annotate!(io::Error::new(
                 io::ErrorKind::Unsupported,

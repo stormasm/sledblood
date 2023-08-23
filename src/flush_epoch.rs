@@ -14,7 +14,11 @@ pub(crate) struct Completion {
 
 impl Completion {
     pub fn new(epoch: NonZeroU64) -> Completion {
-        Completion { mu: Default::default(), cv: Default::default(), epoch }
+        Completion {
+            mu: Default::default(),
+            cv: Default::default(),
+            epoch,
+        }
     }
 
     pub fn wait_for_complete(self) -> NonZeroU64 {
@@ -96,8 +100,9 @@ pub(crate) struct FlushEpochInner {
 impl Drop for FlushEpochInner {
     fn drop(&mut self) {
         let vacancy_mu = self.roll_mu.lock().unwrap();
-        let old_ptr =
-            self.current_active.swap(std::ptr::null_mut(), Ordering::Release);
+        let old_ptr = self
+            .current_active
+            .swap(std::ptr::null_mut(), Ordering::Release);
         if !old_ptr.is_null() {
             //let old: &EpochTracker = &*old_ptr;
             unsafe { drop(Box::from_raw(old_ptr)) }
@@ -140,37 +145,43 @@ impl FlushEpoch {
         let vacancy_mu = self.inner.roll_mu.lock().unwrap();
         let flush_through = self.inner.counter.fetch_add(1, Ordering::Release);
         let new_epoch = NonZeroU64::new(flush_through + 1).unwrap();
-        let forward_flush_notifier =
-            Completion::new(NonZeroU64::new(u64::MAX).unwrap());
+        let forward_flush_notifier = Completion::new(NonZeroU64::new(u64::MAX).unwrap());
         let new_active = Box::into_raw(Box::new(EpochTracker {
             epoch: new_epoch,
             rc: AtomicU64::new(0),
             vacancy_notifier: Completion::new(new_epoch),
             previous_flush_complete: forward_flush_notifier.clone(),
         }));
-        let old_ptr =
-            self.inner.current_active.swap(new_active, Ordering::Release);
+        let old_ptr = self
+            .inner
+            .current_active
+            .swap(new_active, Ordering::Release);
         assert!(!old_ptr.is_null());
 
         let (last_flush_complete_notifier, vacancy_notifier) = unsafe {
             let old: &EpochTracker = &*old_ptr;
             let last = old.rc.fetch_add(SEAL_BIT + 1, Ordering::SeqCst);
 
-            assert_eq!(
-                last & SEAL_BIT,
-                0,
-                "epoch {} double-sealed",
-                flush_through
-            );
+            assert_eq!(last & SEAL_BIT, 0, "epoch {} double-sealed", flush_through);
 
             // mark_complete_inner called via drop in a uniform way
-            drop(FlushEpochGuard { tracker: old, previously_sealed: true });
+            drop(FlushEpochGuard {
+                tracker: old,
+                previously_sealed: true,
+            });
 
-            (old.previous_flush_complete.clone(), old.vacancy_notifier.clone())
+            (
+                old.previous_flush_complete.clone(),
+                old.vacancy_notifier.clone(),
+            )
         };
         guard.defer_drop(unsafe { Box::from_raw(old_ptr) });
         drop(vacancy_mu);
-        (last_flush_complete_notifier, vacancy_notifier, forward_flush_notifier)
+        (
+            last_flush_complete_notifier,
+            vacancy_notifier,
+            forward_flush_notifier,
+        )
     }
 
     pub fn check_in<'a>(&self) -> FlushEpochGuard<'a> {
@@ -181,7 +192,10 @@ impl FlushEpoch {
 
             let previously_sealed = rc & SEAL_BIT == SEAL_BIT;
 
-            let guard = FlushEpochGuard { tracker, previously_sealed };
+            let guard = FlushEpochGuard {
+                tracker,
+                previously_sealed,
+            };
 
             if previously_sealed {
                 // the epoch is already closed, so we must drop the rc

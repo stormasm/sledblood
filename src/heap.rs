@@ -141,7 +141,9 @@ pub struct Config {
 pub fn recover<P: AsRef<Path>>(
     storage_directory: P,
 ) -> io::Result<(Heap, Vec<(u64, InlineArray)>)> {
-    Heap::recover(&Config { path: storage_directory.as_ref().into() })
+    Heap::recover(&Config {
+        path: storage_directory.as_ref().into(),
+    })
 }
 
 struct SlabAddress {
@@ -260,19 +262,11 @@ mod sys_io {
 
     use super::*;
 
-    pub fn read_exact_at<F: FileExt>(
-        file: &F,
-        buf: &mut [u8],
-        offset: u64,
-    ) -> io::Result<()> {
+    pub fn read_exact_at<F: FileExt>(file: &F, buf: &mut [u8], offset: u64) -> io::Result<()> {
         maybe!(file.read_exact_at(buf, offset))
     }
 
-    pub fn write_all_at<F: FileExt>(
-        file: &F,
-        buf: &[u8],
-        offset: u64,
-    ) -> io::Result<()> {
+    pub fn write_all_at<F: FileExt>(file: &F, buf: &[u8], offset: u64) -> io::Result<()> {
         maybe!(file.write_all_at(buf, offset))
     }
 }
@@ -310,11 +304,7 @@ mod sys_io {
         }
     }
 
-    pub fn write_all_at<F: FileExt>(
-        file: &F,
-        mut buf: &[u8],
-        mut offset: u64,
-    ) -> io::Result<()> {
+    pub fn write_all_at<F: FileExt>(file: &F, mut buf: &[u8], mut offset: u64) -> io::Result<()> {
         while !buf.is_empty() {
             match maybe!(file.seek_write(buf, offset)) {
                 Ok(0) => {
@@ -343,11 +333,7 @@ struct Slab {
 }
 
 impl Slab {
-    fn read(
-        &self,
-        slot: u64,
-        _guard: &mut Guard<'_, DeferredFree, 1>,
-    ) -> io::Result<Vec<u8>> {
+    fn read(&self, slot: u64, _guard: &mut Guard<'_, DeferredFree, 1>) -> io::Result<Vec<u8>> {
         let mut data = Vec::with_capacity(self.slot_size);
         unsafe {
             data.set_len(self.slot_size);
@@ -357,8 +343,7 @@ impl Slab {
 
         sys_io::read_exact_at(&self.file, &mut data, whence)?;
 
-        let hash_actual: [u8; 4] =
-            crc32fast::hash(&data[..self.slot_size - 4]).to_le_bytes();
+        let hash_actual: [u8; 4] = crc32fast::hash(&data[..self.slot_size - 4]).to_le_bytes();
         let hash_expected = &data[self.slot_size - 4..];
 
         if hash_expected != hash_actual {
@@ -374,21 +359,17 @@ impl Slab {
         } else if self.slot_size <= u16::MAX as usize {
             // crc32 + 2 byte frame
             let mut size_bytes: [u8; 2] = [0; 2];
-            size_bytes
-                .copy_from_slice(&data[self.slot_size - 6..self.slot_size - 4]);
+            size_bytes.copy_from_slice(&data[self.slot_size - 6..self.slot_size - 4]);
             usize::from(u16::from_le_bytes(size_bytes))
         } else if self.slot_size <= u32::MAX as usize {
             // crc32 + 4 byte frame
             let mut size_bytes: [u8; 4] = [0; 4];
-            size_bytes
-                .copy_from_slice(&data[self.slot_size - 8..self.slot_size - 4]);
+            size_bytes.copy_from_slice(&data[self.slot_size - 8..self.slot_size - 4]);
             usize::try_from(u32::from_le_bytes(size_bytes)).unwrap()
         } else {
             // crc32 + 8 byte frame
             let mut size_bytes: [u8; 8] = [0; 8];
-            size_bytes.copy_from_slice(
-                &data[self.slot_size - 12..self.slot_size - 4],
-            );
+            size_bytes.copy_from_slice(&data[self.slot_size - 12..self.slot_size - 4]);
             usize::try_from(u64::from_le_bytes(size_bytes)).unwrap()
         };
 
@@ -410,22 +391,18 @@ impl Slab {
         } else if self.slot_size <= u16::MAX as usize {
             // crc32 + 2 byte frame
             let size_bytes: [u8; 2] = u16::try_from(len).unwrap().to_le_bytes();
-            data[self.slot_size - 6..self.slot_size - 4]
-                .copy_from_slice(&size_bytes);
+            data[self.slot_size - 6..self.slot_size - 4].copy_from_slice(&size_bytes);
         } else if self.slot_size <= u32::MAX as usize {
             // crc32 + 4 byte frame
             let size_bytes: [u8; 4] = u32::try_from(len).unwrap().to_le_bytes();
-            data[self.slot_size - 8..self.slot_size - 4]
-                .copy_from_slice(&size_bytes);
+            data[self.slot_size - 8..self.slot_size - 4].copy_from_slice(&size_bytes);
         } else {
             // crc32 + 8 byte frame
             let size_bytes: [u8; 8] = u64::try_from(len).unwrap().to_le_bytes();
-            data[self.slot_size - 12..self.slot_size - 4]
-                .copy_from_slice(&size_bytes);
+            data[self.slot_size - 12..self.slot_size - 4].copy_from_slice(&size_bytes);
         }
 
-        let hash: [u8; 4] =
-            crc32fast::hash(&data[..self.slot_size - 4]).to_le_bytes();
+        let hash: [u8; 4] = crc32fast::hash(&data[..self.slot_size - 4]).to_le_bytes();
         data[self.slot_size - 4..].copy_from_slice(&hash);
 
         let whence = self.slot_size as u64 * slot;
@@ -445,10 +422,7 @@ impl Drop for DeferredFree {
     }
 }
 
-fn set_error(
-    global_error: &AtomicPtr<(io::ErrorKind, String)>,
-    error: &io::Error,
-) {
+fn set_error(global_error: &AtomicPtr<(io::ErrorKind, String)>, error: &io::Error) {
     let kind = error.kind();
     let reason = error.to_string();
 
@@ -494,15 +468,12 @@ impl fmt::Debug for Heap {
 }
 
 impl Heap {
-    pub fn get_global_error_arc(
-        &self,
-    ) -> Arc<AtomicPtr<(io::ErrorKind, String)>> {
+    pub fn get_global_error_arc(&self) -> Arc<AtomicPtr<(io::ErrorKind, String)>> {
         self.global_error.clone()
     }
 
     fn check_error(&self) -> io::Result<()> {
-        let err_ptr: *const (io::ErrorKind, String) =
-            self.global_error.load(Ordering::Acquire);
+        let err_ptr: *const (io::ErrorKind, String) = self.global_error.load(Ordering::Acquire);
 
         if err_ptr.is_null() {
             Ok(())
@@ -516,9 +487,7 @@ impl Heap {
         set_error(&self.global_error, error);
     }
 
-    pub fn recover(
-        config: &Config,
-    ) -> io::Result<(Heap, Vec<(u64, InlineArray)>)> {
+    pub fn recover(config: &Config) -> io::Result<(Heap, Vec<(u64, InlineArray)>)> {
         log::trace!("recovering Heap at {:?}", config.path);
         let slabs_dir = config.path.join("slabs");
 
@@ -542,16 +511,14 @@ impl Heap {
             MetadataStore::recover(config.path.join("metadata"))?;
 
         let pt = PageTable::<AtomicU64>::default();
-        let mut user_data =
-            Vec::<(u64, InlineArray)>::with_capacity(recovered_metadata.len());
+        let mut user_data = Vec::<(u64, InlineArray)>::with_capacity(recovered_metadata.len());
         let mut object_ids: FnvHashSet<u64> = Default::default();
         let mut slots_per_slab: [FnvHashSet<u64>; N_SLABS] =
             core::array::from_fn(|_| Default::default());
         for (k, location, data) in recovered_metadata {
             object_ids.insert(k);
             let slab_address = SlabAddress::from(location);
-            slots_per_slab[slab_address.slab_id as usize]
-                .insert(slab_address.slot());
+            slots_per_slab[slab_address.slab_id as usize].insert(slab_address.slot());
             pt.get(k).store(location.get(), Ordering::Relaxed);
             user_data.push((k, data.clone()));
         }
@@ -568,9 +535,7 @@ impl Heap {
             slabs.push(Slab {
                 slot_size,
                 file,
-                slot_allocator: Arc::new(Allocator::from_allocated(
-                    &slots_per_slab[i],
-                )),
+                slot_allocator: Arc::new(Allocator::from_allocated(&slots_per_slab[i])),
             })
         }
 
@@ -579,9 +544,7 @@ impl Heap {
             Heap {
                 slabs: Arc::new(slabs.try_into().unwrap()),
                 config: config.clone(),
-                object_id_allocator: Arc::new(Allocator::from_allocated(
-                    &object_ids,
-                )),
+                object_id_allocator: Arc::new(Allocator::from_allocated(&object_ids)),
                 pt,
                 global_error: metadata_store.get_global_error_arc(),
                 metadata_store: Arc::new(metadata_store),
@@ -644,25 +607,18 @@ impl Heap {
             .collect();
 
         let slabs = &self.slabs;
-        let metadata_batch_res: io::Result<
-            Vec<(u64, Option<(NonZeroU64, InlineArray)>)>,
-        > = batch
+        let metadata_batch_res: io::Result<Vec<(u64, Option<(NonZeroU64, InlineArray)>)>> = batch
             .into_par_iter()
             .map(
-                |(object_id, val_opt): (
-                    u64,
-                    Option<(InlineArray, Vec<u8>)>,
-                )| {
+                |(object_id, val_opt): (u64, Option<(InlineArray, Vec<u8>)>)| {
                     let new_meta = if let Some((user_data, bytes)) = val_opt {
                         let slab_id = slab_for_size(bytes.len());
                         let slab = &slabs[usize::from(slab_id)];
                         let slot = slab.slot_allocator.allocate();
-                        let new_location =
-                            SlabAddress::from_slab_slot(slab_id, slot);
+                        let new_location = SlabAddress::from_slab_slot(slab_id, slot);
                         let new_location_nzu: NonZeroU64 = new_location.into();
 
-                        let complete_durability_pipeline =
-                            maybe!(slab.write(slot, bytes));
+                        let complete_durability_pipeline = maybe!(slab.write(slot, bytes));
 
                         if let Err(e) = complete_durability_pipeline {
                             // can immediately free slot as the
@@ -687,8 +643,7 @@ impl Heap {
             }
         };
 
-        if let Err(e) = self.metadata_store.insert_batch(metadata_batch.clone())
-        {
+        if let Err(e) = self.metadata_store.insert_batch(metadata_batch.clone()) {
             self.set_error(&e);
 
             // this is very cold, so it's fine if it's not fast
@@ -711,8 +666,7 @@ impl Heap {
                 0
             };
 
-            let last_u64 =
-                self.pt.get(object_id).swap(new_location, Ordering::Release);
+            let last_u64 = self.pt.get(object_id).swap(new_location, Ordering::Release);
 
             if let Some(nzu) = NonZeroU64::new(last_u64) {
                 let last_address = SlabAddress::from(nzu);

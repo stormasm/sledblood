@@ -10,12 +10,7 @@ pub(crate) struct EventVerifier {
 }
 
 impl EventVerifier {
-    pub(crate) fn mark_flush(
-        &self,
-        node_id: NodeId,
-        flush_epoch: NonZeroU64,
-        mutation_count: u64,
-    ) {
+    pub(crate) fn mark_flush(&self, node_id: NodeId, flush_epoch: NonZeroU64, mutation_count: u64) {
         let mut flush_model = self.flush_model.lock().unwrap();
 
         let epoch_entry = flush_model.entry(flush_epoch).or_default();

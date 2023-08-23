@@ -254,16 +254,13 @@ fn inserts<D: Databench>(store: &D) -> Vec<InsertStats> {
     let mut ret = vec![];
 
     for concurrency in CONCURRENCY {
-        let insert_elapsed =
-            execute_lockstep_concurrent(factory, f, *concurrency);
+        let insert_elapsed = execute_lockstep_concurrent(factory, f, *concurrency);
 
         let flush_timer = Instant::now();
         store.flush_generic();
 
-        let wps = (N_WRITES_PER_THREAD * *concurrency as u32) as u64
-            * 1_000_000_u64
-            / u64::try_from(insert_elapsed.as_micros().max(1))
-                .unwrap_or(u64::MAX);
+        let wps = (N_WRITES_PER_THREAD * *concurrency as u32) as u64 * 1_000_000_u64
+            / u64::try_from(insert_elapsed.as_micros().max(1)).unwrap_or(u64::MAX);
 
         ret.push(InsertStats {
             thread_count: *concurrency,
@@ -299,16 +296,16 @@ fn gets<D: Databench>(store: &D) -> Vec<GetStats> {
     let mut ret = vec![];
 
     for concurrency in CONCURRENCY {
-        let get_stone_elapsed =
-            execute_lockstep_concurrent(factory, f, *concurrency);
+        let get_stone_elapsed = execute_lockstep_concurrent(factory, f, *concurrency);
 
-        let rps = (N_WRITES_PER_THREAD * MAX_CONCURRENCY * *concurrency as u32)
-            as u64
+        let rps = (N_WRITES_PER_THREAD * MAX_CONCURRENCY * *concurrency as u32) as u64
             * 1_000_000_u64
-            / u64::try_from(get_stone_elapsed.as_micros().max(1))
-                .unwrap_or(u64::MAX);
+            / u64::try_from(get_stone_elapsed.as_micros().max(1)).unwrap_or(u64::MAX);
 
-        ret.push(GetStats { thread_count: *concurrency, gets_per_second: rps });
+        ret.push(GetStats {
+            thread_count: *concurrency,
+            gets_per_second: rps,
+        });
 
         println!(
             "{} gets/s with concurrency of {concurrency}, {:?} total reads {}",
@@ -320,11 +317,7 @@ fn gets<D: Databench>(store: &D) -> Vec<GetStats> {
     ret
 }
 
-fn execute_lockstep_concurrent<
-    State: Send,
-    Factory: FnMut() -> State,
-    F: Sync + Fn(State),
->(
+fn execute_lockstep_concurrent<State: Send, Factory: FnMut() -> State, F: Sync + Fn(State)>(
     mut factory: Factory,
     f: F,
     concurrency: usize,
@@ -414,7 +407,11 @@ fn bench<D: Databench>() -> Stats {
 
     let before_flush = Instant::now();
     store.flush_generic();
-    println!("final flush took {:?} for {}", before_flush.elapsed(), D::NAME);
+    println!(
+        "final flush took {:?} for {}",
+        before_flush.elapsed(),
+        D::NAME
+    );
 
     let get_stats = gets(&store);
 
@@ -450,8 +447,7 @@ fn main() {
 
     println!(
         "raw data size: {}",
-        (MAX_CONCURRENCY * N_WRITES_PER_THREAD * BYTES_PER_ITEM)
-            .to_formatted_string(&Locale::en)
+        (MAX_CONCURRENCY * N_WRITES_PER_THREAD * BYTES_PER_ITEM).to_formatted_string(&Locale::en)
     );
     println!("sled 1.0 space stats:");
     new_stats.print_report();
