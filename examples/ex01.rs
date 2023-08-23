@@ -6,6 +6,6 @@ fn main() {
 
     db.insert("rick", "storm").expect("failed to insert");
 
-    let value = db.get("rick");
-    println!("{:?}", value);
+    let value = db.get("rick").unwrap().unwrap();
+    println!("{:?}", String::from_utf8_lossy(&value));
 }
