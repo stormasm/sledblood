@@ -22,7 +22,9 @@ fn main() {
     println!("value03 -> {:?}", value03.unwrap());
     println!("value04 -> {:?}", value04.unwrap());
 
-    //assert_eq!(db.insert(&["a", "b", "c"], vec![0]).unwrap(), None);
+    db.insert(500u16.to_be_bytes(), vec![10])
+        .expect("failed to insert");
+
     assert_eq!(
         db.insert(&[1, 2, 3], vec![1]).unwrap(),
         Some(sled::InlineArray::from(&[0]))
