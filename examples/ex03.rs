@@ -11,13 +11,6 @@ fn main() {
     let value04 = db.get(&[7, 8, 9]);
 
     println!("value01 -> {:?}", String::from_utf8_lossy(&value01));
-
-    /*
-    println!("value02 -> {:?}", String::from_utf8_lossy(&value02));
-    println!("value03 -> {:?}", String::from_utf8_lossy(&value03));
-    println!("value04 -> {:?}", String::from_utf8_lossy(&value04));
-    */
-
     println!("value02 -> {:?}", value02.unwrap());
     println!("value03 -> {:?}", value03.unwrap());
     println!("value04 -> {:?}", value04.unwrap());
@@ -29,4 +22,13 @@ fn main() {
         db.insert(&[1, 2, 3], vec![1]).unwrap(),
         Some(sled::InlineArray::from(&[0]))
     );
+
+    println!("\n");
+
+    let mut x = db.iter();
+    //println!("{:?}", x.next());
+
+    while let Some(element) = x.next() {
+        println!("{:?}", element);
+    }
 }
