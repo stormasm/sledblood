@@ -2,11 +2,11 @@ fn main() {
     let db = sled::open("sled-ex03.db").expect("failed to open");
 
     db.insert("rick", "storm").expect("failed to insert");
-    db.insert(&[1, 2, 3], vec![0]).expect("failed to insert 2");
+    db.insert([1, 2, 3], vec![0]).expect("failed to insert 2");
     db.insert(&[4, 5, 6], vec![1]).expect("failed to insert 3");
 
     let value01 = db.get("rick").unwrap().unwrap();
-    let value02 = db.get(&[1, 2, 3]);
+    let value02 = db.get([1, 2, 3]);
     let value03 = db.get(&[4, 5, 6]);
     let value04 = db.get(&[7, 8, 9]);
 
