@@ -31,4 +31,6 @@ fn main() {
     while let Some(element) = x.next() {
         println!("{:?}", element);
     }
+
+    println!("\nsize_on_disk = {:?}", db.size_on_disk());
 }
