@@ -1,4 +1,6 @@
 fn main() {
+    let _ = env_logger::try_init();
+
     let db = sled::open("sled-ex04.db").expect("failed to open");
 
     db.insert("abc", "defghi").expect("failed to insert 1");
