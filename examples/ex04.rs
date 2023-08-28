@@ -20,5 +20,6 @@ fn main() {
         println!("{:?}", element);
     }
 
+    println!("\nstorage stats = {:?}", db.storage_stats());
     println!("\nsize_on_disk = {:?}", db.size_on_disk());
 }
